@@ -159,7 +159,7 @@
           }
         },
         "runtime": {
-          "lib/net6.0/Newtonsoft.Json.dll": {
+          "lib/net6.0/_._": {
             "related": ".xml"
           }
         }
@@ -870,6 +870,7 @@
             "generatePathProperty": true
           },
           "Newtonsoft.Json": {
+            "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
             "target": "Package",
             "version": "[13.0.3, )"
           },
