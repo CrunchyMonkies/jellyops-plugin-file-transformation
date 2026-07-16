@@ -1,0 +1,26 @@
+# File Transformation plugin (v12 port), delivered by JellyOps to the home-media instance.
+# Zero-config: no install hooks, no companion workload — it Harmony-patches the server web
+# static-file pipeline at startup so other plugins (e.g. OpenWatchParty) can register
+# index.html transformations. REQUIRES a web-serving (non-split) Jellyfin instance, since it
+# patches the server's own web hosting.
+#
+# Pin spec.pluginImage.reference to the @sha256 digest printed by docker/build-push.sh.
+apiVersion: jellyfin.jellyops.io/v1alpha1
+kind: JellyfinPlugin
+metadata:
+  name: file-transformation
+  namespace: jellyfin
+  labels:
+    jellyfin.jellyops.io/instance: home-media
+spec:
+  jellyfinRef:
+    name: jellyfin
+  pluginImage:
+    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:REPLACE_ME_WITH_DIGEST
+    pullPolicy: IfNotPresent
+  meta:
+    guid: cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11
+    name: "File Transformation"
+    version: "2.5.0.0"
+    targetAbi: "12.0.0.0"
+  injection: imageVolumeCopy

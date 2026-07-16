@@ -1,0 +1,90 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Jellyfin.Plugin.FileTransformation</RootNamespace>
+    <AssemblyName>Jellyfin.Plugin.FileTransformation</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The plugin ships its own AssemblyInfo (Properties/AssemblyInfo.cs) with the JellyfinVersion attribute. -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Ship third-party deps the host does not provide (Harmony, Newtonsoft, prometheus). -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <NoWarn>CS1591;CA2255</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- Bind to the HOST's Newtonsoft.Json (the server ships /jellyfin/Newtonsoft.Json.dll via
+         MediaBrowser.Providers) instead of shipping our own copy. This is load-bearing for
+         cross-plugin interop: OpenWatchParty registers its index.html transform by reflection-
+         invoking PluginInterface.RegisterTransformation(JObject). If FT and OWP each shipped their
+         own Newtonsoft into separate plugin AssemblyLoadContexts, the two JObject types would have
+         different assembly identity and the Invoke would throw ArgumentException. ExcludeAssets=
+         runtime keeps FT from shipping Newtonsoft so its ALC falls back to the host Default ALC —
+         the same one OWP (also ExcludeAssets=runtime) resolves — so the JObject type matches. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" ExcludeAssets="runtime" />
+    <!-- 2.4.2 supports CoreCLR 10 (.NET 10); 2.4.0 throws PlatformNotSupportedException on it.
+         Compile-only: Harmony is loaded at runtime from the embedded 0Harmony.dll (ModuleInitializer),
+         not as a loose sibling DLL, to avoid a double-load across AssemblyLoadContexts. -->
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" GeneratePathProperty="true" ExcludeAssets="runtime" />
+    <PackageReference Include="prometheus-net" Version="8.2.1" />
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    <PackageReference Include="prometheus-net.DotNetRuntime" Version="4.4.1" />
+  </ItemGroup>
+
+  <!--
+    Compile against the EXACT Jellyfin v12 rc2 assemblies the running server loads
+    (v12.0.0-rc2-jc-0.2.0), but do NOT ship copies (Private=false + ExcludeAssets=runtime).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../../jellyfin-src/MediaBrowser.Controller/MediaBrowser.Controller.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="../../../jellyfin-src/MediaBrowser.Common/MediaBrowser.Common.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="../../../jellyfin-src/MediaBrowser.Model/MediaBrowser.Model.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="../../../jellyfin-src/src/Jellyfin.Extensions/Jellyfin.Extensions.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Harmony is loaded dynamically from an embedded resource (see ModuleInitializer). Embed the
+         net10 build to match the runtime. -->
+    <EmbeddedResource Include="$(PkgLib_Harmony)/lib/net10.0/0Harmony.dll" />
+    <EmbeddedResource Include="Configuration/config.html" />
+    <None Include="meta.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Only the 12.0 version-specific code compiles (each folder defines the same class). -->
+  <ItemGroup>
+    <Compile Remove="JellyfinVersionSpecific/10.10.7/**/*.cs" />
+    <Compile Remove="JellyfinVersionSpecific/10.11/**/*.cs" />
+    <Compile Remove="JellyfinVersionSpecific/10.11.0/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Strip host assemblies from BOTH build and publish output (publish emits the full closure). -->
+  <Target Name="StripHostAssemblies" AfterTargets="Build">
+    <ItemGroup>
+      <_HostAssemblies Include="$(OutDir)Emby.*;$(OutDir)Jellyfin.*;$(OutDir)MediaBrowser.*"
+                       Exclude="$(OutDir)Jellyfin.Plugin.FileTransformation*" />
+    </ItemGroup>
+    <Delete Files="@(_HostAssemblies)" />
+  </Target>
+  <Target Name="StripHostAssembliesFromPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_PubHostAssemblies Include="$(PublishDir)Emby.*;$(PublishDir)Jellyfin.*;$(PublishDir)MediaBrowser.*"
+                          Exclude="$(PublishDir)Jellyfin.Plugin.FileTransformation*" />
+    </ItemGroup>
+    <Delete Files="@(_PubHostAssemblies)" />
+  </Target>
+
+</Project>

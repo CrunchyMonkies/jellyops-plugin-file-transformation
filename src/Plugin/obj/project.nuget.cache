@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "dgSpecHash": "Z/440xGLPmw=",
+  "success": true,
+  "projectFilePath": "/home/azerothian/dev/jellyfin/jellyops-plugin-file-transformation/src/Plugin/Jellyfin.Plugin.FileTransformation.csproj",
+  "expectedPackageFiles": [
+    "/home/azerothian/.nuget/packages/bitfaster.caching/2.6.0/bitfaster.caching.2.6.0.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/diacritics/4.1.8/diacritics.4.1.8.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/icu4n/60.1.0-alpha.356/icu4n.60.1.0-alpha.356.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/icu4n.transliterator/60.1.0-alpha.356/icu4n.transliterator.60.1.0-alpha.356.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/j2n/2.0.0/j2n.2.0.0.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/lib.harmony/2.4.2/lib.harmony.2.4.2.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/microsoft.entityframeworkcore/10.0.9/microsoft.entityframeworkcore.10.0.9.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/microsoft.entityframeworkcore.abstractions/10.0.9/microsoft.entityframeworkcore.abstractions.10.0.9.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/microsoft.entityframeworkcore.analyzers/10.0.9/microsoft.entityframeworkcore.analyzers.10.0.9.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/microsoft.entityframeworkcore.relational/10.0.9/microsoft.entityframeworkcore.relational.10.0.9.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/nebml/1.1.0.5/nebml.1.1.0.5.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/polly/8.7.0/polly.8.7.0.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/polly.core/8.7.0/polly.core.8.7.0.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/prometheus-net/8.2.1/prometheus-net.8.2.1.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/prometheus-net.aspnetcore/8.2.1/prometheus-net.aspnetcore.8.2.1.nupkg.sha512",
+    "/home/azerothian/.nuget/packages/prometheus-net.dotnetruntime/4.4.1/prometheus-net.dotnetruntime.4.4.1.nupkg.sha512"
+  ],
+  "logs": []
+}
