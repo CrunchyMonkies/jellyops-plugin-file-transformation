@@ -16,7 +16,7 @@ spec:
   jellyfinRef:
     name: jellyfin
   pluginImage:
-    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:e64d7b9997edc00b15ace9a1863a5dbc00b576da9412c4b47e15e415d9188fde
+    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:e461815bd5e87840a8495f417f1a89218f1ad62bb5d03f5100a6a210ec47ce33
     pullPolicy: IfNotPresent
   meta:
     guid: cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11
