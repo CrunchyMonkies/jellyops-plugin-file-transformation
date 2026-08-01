@@ -96,7 +96,7 @@ namespace Jellyfin.Plugin.FileTransformation.Helpers
 
                 mainApp.UseCors();
 
-                // v12 (rc2): Startup.Configure adds request localization here and no longer calls
+                // v12 (rc3): Startup.Configure adds request localization here and no longer calls
                 // UsePathTrim. This reimplementation must mirror the target version's pipeline exactly.
                 mainApp.UseRequestLocalization();
 

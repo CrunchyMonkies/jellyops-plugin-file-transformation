@@ -6,4 +6,6 @@ FROM scratch
 COPY plugin/ /
 LABEL io.jellyops.plugin.guid="cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11" \
       io.jellyops.plugin.name="File Transformation" \
-      io.jellyops.plugin.version="2.5.0.0"
+      io.jellyops.plugin.version="2.5.0.2" \
+      io.jellyops.plugin.targetAbi="12.0.0.0" \
+      io.jellyops.plugin.framework="net10.0"

@@ -21,6 +21,6 @@ spec:
   meta:
     guid: cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11
     name: "File Transformation"
-    version: "2.5.0.1"
+    version: "2.5.0.2"
     targetAbi: "12.0.0.0"
   injection: imageVolumeCopy

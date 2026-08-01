@@ -3,7 +3,7 @@
 # Build and push the File Transformation plugin image-volume payload for JellyOps.
 #
 # Compiles src/Plugin against a sibling jellyfin-src checkout pinned to the Jellyfin
-# v12 rc2 tag the deployed server runs (v12.0.0-rc2-jc-0.2.0), strips host assemblies
+# v12 rc3 tag the deployed server runs (v12.0.0-rc3-jc-0.2.1), strips host assemblies
 # (the .csproj StripHostAssemblies* targets), and packages a FROM-scratch image.
 # 0Harmony is embedded in the plugin DLL, not shipped loose.
 #
@@ -24,10 +24,10 @@ JELLYFIN_SRC="${JELLYFIN_SRC:-$(cd "$ROOT/.." && pwd)/jellyfin-src}"
 PROJECT="$ROOT/src/Plugin/Jellyfin.Plugin.FileTransformation.csproj"
 
 [ -d "$JELLYFIN_SRC" ] || { echo "!! jellyfin-src not found at $JELLYFIN_SRC" >&2; exit 1; }
-# Pin: build only against the rc2 tag the deployed server runs.
-want="v12.0.0-rc2-jc-0.2.0"
+# Pin: build only against the rc3 tag the deployed server runs.
+want="v12.0.0-rc3-jc-0.2.1"
 got="$(git -C "$JELLYFIN_SRC" describe --tags --exact-match 2>/dev/null || echo none)"
-[ "$got" = "$want" ] || { echo "!! jellyfin-src is at '$got', expected '$want' (rc2)" >&2; exit 1; }
+[ "$got" = "$want" ] || { echo "!! jellyfin-src is at '$got', expected '$want' (rc3)" >&2; exit 1; }
 
 CTX="$(mktemp -d)"; trap 'rm -rf "$CTX"' EXIT
 mkdir -p "$CTX/plugin"

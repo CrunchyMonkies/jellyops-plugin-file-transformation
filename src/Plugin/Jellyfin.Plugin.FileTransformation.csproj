@@ -34,8 +34,8 @@
   </ItemGroup>
 
   <!--
-    Compile against the EXACT Jellyfin v12 rc2 assemblies the running server loads
-    (v12.0.0-rc2-jc-0.2.0), but do NOT ship copies (Private=false + ExcludeAssets=runtime).
+    Compile against the EXACT Jellyfin v12 rc3 assemblies the running server loads
+    (v12.0.0-rc3-jc-0.2.1), but do NOT ship copies (Private=false + ExcludeAssets=runtime).
   -->
   <ItemGroup>
     <ProjectReference Include="../../../jellyfin-src/MediaBrowser.Controller/MediaBrowser.Controller.csproj">
