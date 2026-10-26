@@ -2,54 +2,71 @@
 #
 # Build and push the File Transformation plugin image-volume payload for JellyOps.
 #
-# Compiles src/Plugin against a sibling jellyfin-src checkout pinned to the Jellyfin
-# v12 rc3 tag the deployed server runs (v12.0.0-rc3-jc-0.2.1), strips host assemblies
-# (the .csproj StripHostAssemblies* targets), and packages a FROM-scratch image.
-# 0Harmony is embedded in the plugin DLL, not shipped loose.
+# The payload is NOT compiled here. It is upstream's published release artifact
+# (Release-<jellyfin>.zip from IAmParadox27/jellyfin-plugin-file-transformation), verified
+# against a pinned SHA-256, unzipped into the build context's `plugin/` dir together with
+# docker/meta.json, and packaged into a FROM-scratch image whose root IS the Jellyfin
+# plugin directory. Built with --provenance=false so it is a single plain manifest the
+# kubelet mounts cleanly as an image volume (pass PROVENANCE_FLAG= for podman).
 #
-# Usage: docker/build-push.sh [TAG]
-# Env:  REGISTRY (default ghcr.io/crunchymonkies/jellyops-plugin-file-transformation)
-#       IMAGE    (default <REGISTRY>/plugin)
-#       JELLYFIN_SRC (default <repo>/../jellyfin-src)
-#       PUSH     (default true)
+# Usage:
+#   docker/build-push.sh [TAG]
+#
+# Environment overrides:
+#   REGISTRY      image repo prefix  (default: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation)
+#   IMAGE         full image repo    (default: <REGISTRY>/plugin)
+#   FT_REPO       release source     (default: IAmParadox27/jellyfin-plugin-file-transformation)
+#   FT_TAG        release tag        (default: 3.0.2.0)
+#   FT_ASSET      release zip name   (default: Release-12.2.0.zip)
+#   FT_SHA256     expected zip hash  (default: pinned hash of 3.0.2.0/Release-12.2.0.zip)
+#   CONTAINER     build tool         (default: docker; e.g. CONTAINER=podman)
+#   PUSH          push to registry   (default: true; set PUSH=false to build only)
 set -euo pipefail
 
 REGISTRY="${REGISTRY:-ghcr.io/crunchymonkies/jellyops-plugin-file-transformation}"
 IMAGE="${IMAGE:-${REGISTRY}/plugin}"
+FT_REPO="${FT_REPO:-IAmParadox27/jellyfin-plugin-file-transformation}"
+FT_TAG="${FT_TAG:-3.0.2.0}"
+FT_ASSET="${FT_ASSET:-Release-12.2.0.zip}"
+FT_SHA256="${FT_SHA256:-b267dc0e09154f242ef9d3201a6ed4fd1dc9594da42ff133400b0ed4ca10b859}"
+CONTAINER="${CONTAINER:-docker}"
+PROVENANCE_FLAG="${PROVENANCE_FLAG---provenance=false}"
 PUSH="${PUSH:-true}"
 TAG="${1:-$(date +%Y%m).$(date +%d).1}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-JELLYFIN_SRC="${JELLYFIN_SRC:-$(cd "$ROOT/.." && pwd)/jellyfin-src}"
-PROJECT="$ROOT/src/Plugin/Jellyfin.Plugin.FileTransformation.csproj"
-
-[ -d "$JELLYFIN_SRC" ] || { echo "!! jellyfin-src not found at $JELLYFIN_SRC" >&2; exit 1; }
-# Pin: build only against the rc3 tag the deployed server runs.
-want="v12.0.0-rc3-jc-0.2.1"
-got="$(git -C "$JELLYFIN_SRC" describe --tags --exact-match 2>/dev/null || echo none)"
-[ "$got" = "$want" ] || { echo "!! jellyfin-src is at '$got', expected '$want' (rc3)" >&2; exit 1; }
-
 CTX="$(mktemp -d)"; trap 'rm -rf "$CTX"' EXIT
 mkdir -p "$CTX/plugin"
 
-echo ">> Publishing plugin (Release, net10.0) against $JELLYFIN_SRC"
-dotnet publish "$PROJECT" -c Release -o "$CTX/publish" -v minimal
-cp "$CTX/publish/"*.dll "$CTX/plugin/"
-cp "$CTX/publish/meta.json" "$CTX/plugin/meta.json"
+echo ">> Downloading ${FT_REPO} ${FT_TAG} (${FT_ASSET})"
+curl -fsSL -o "$CTX/$FT_ASSET" \
+  "https://github.com/${FT_REPO}/releases/download/${FT_TAG}/${FT_ASSET}"
+echo "${FT_SHA256}  $CTX/$FT_ASSET" | sha256sum -c -
 
-# Host assemblies must NOT ship (find, not ls-globs — see the oauth2 leak lesson).
+unzip -o -q "$CTX/$FT_ASSET" -d "$CTX/plugin"
+cp "$ROOT/docker/meta.json" "$CTX/plugin/meta.json"
+
+# Sanity-check: plugin DLL + meta present, and no host assemblies leaked.
+test -f "$CTX/plugin/Jellyfin.Plugin.FileTransformation.dll" || { echo "!! plugin DLL missing" >&2; exit 1; }
+test -f "$CTX/plugin/meta.json" || { echo "!! meta.json missing" >&2; exit 1; }
 LEAKED="$(find "$CTX/plugin" -maxdepth 1 -type f \( -name 'Emby.*' -o -name 'MediaBrowser.*' \
   -o \( -name 'Jellyfin.*' -a ! -name 'Jellyfin.Plugin.FileTransformation*' \) \))"
 [ -z "$LEAKED" ] || { echo "!! host assemblies leaked:" >&2; echo "$LEAKED" >&2; exit 1; }
 echo ">> Payload:"; ( cd "$CTX/plugin" && ls -1 )
 
+PLUGIN_VERSION="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$CTX/plugin/meta.json" | head -1 | grep -oE '[0-9.]+')"
+
 cp "$ROOT/docker/Dockerfile.plugin" "$CTX/Dockerfile.plugin"
-echo ">> Building ${IMAGE} (tags: ${TAG}, latest)"
-docker build --provenance=false -f "$CTX/Dockerfile.plugin" -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "$CTX"
+echo ">> Building ${IMAGE} (tags: ${PLUGIN_VERSION}, ${TAG}, latest)"
+# shellcheck disable=SC2086
+"$CONTAINER" build $PROVENANCE_FLAG -f "$CTX/Dockerfile.plugin" \
+  -t "${IMAGE}:${PLUGIN_VERSION}" -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "$CTX"
 
 if [ "$PUSH" = "true" ]; then
-  docker push "${IMAGE}:${TAG}"; docker push "${IMAGE}:latest"
-  DIGEST="$(docker inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' "${IMAGE}:${TAG}" | grep "^${IMAGE}@" | head -1)"
+  "$CONTAINER" push "${IMAGE}:${PLUGIN_VERSION}"
+  "$CONTAINER" push "${IMAGE}:${TAG}"
+  "$CONTAINER" push "${IMAGE}:latest"
+  DIGEST="$("$CONTAINER" inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' "${IMAGE}:${PLUGIN_VERSION}" | grep "^${IMAGE}@" | head -1)"
   echo ">> Pushed. Pin in k8s (spec.pluginImage.reference): ${DIGEST}"
 else
   echo ">> PUSH=false — built only."
