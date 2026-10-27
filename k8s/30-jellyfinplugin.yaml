@@ -21,7 +21,7 @@ spec:
   jellyfinRef:
     name: jellyfin
   pluginImage:
-    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:e461815bd5e87840a8495f417f1a89218f1ad62bb5d03f5100a6a210ec47ce33 # TODO re-pin to the 3.0.2.0 image
+    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:68d87e3dcac6d8923697d1ff00ce297f71ba64e5e4ea7c61bdf825c71ff26ffb # v3.0.2 (upstream 3.0.2.0)
     pullPolicy: IfNotPresent
   meta:
     guid: 5e87cc92-571a-4d8d-8d98-d2d4147f9f90 # upstream plugin Id (the DLL's FileTransformationPlugin.Id)
