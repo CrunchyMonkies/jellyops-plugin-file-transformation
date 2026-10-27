@@ -1,0 +1,13 @@
+{
+  "guid": "5e87cc92-571a-4d8d-8d98-d2d4147f9f90",
+  "name": "File Transformation",
+  "description": "Adds support for plugins to change jellyfin-web content without actually modifying the files directly but intercepts the requests for the served data.",
+  "overview": "Upstream IAmParadox27/jellyfin-plugin-file-transformation 3.0.2.0 (GPL-3.0), Release-12.2.0.zip, repackaged unmodified for JellyOps.",
+  "owner": "IAmParadox27",
+  "category": "General",
+  "version": "3.0.2.0",
+  "targetAbi": "12.2.0.0",
+  "framework": "net10.0",
+  "status": "Active",
+  "autoUpdate": false
+}

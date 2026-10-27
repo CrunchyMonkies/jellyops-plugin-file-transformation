@@ -1,11 +1,24 @@
-# Plugin-only OCI image-volume payload for JellyOps: the filesystem root IS the
-# Jellyfin plugin directory (meta.json + Jellyfin.Plugin.FileTransformation.dll +
-# third-party deps). Built from src/Plugin via docker/build-push.sh (host assemblies
-# stripped; 0Harmony is embedded in the plugin DLL, not shipped loose).
+# Plugin-only OCI image: the image-volume payload consumed by JellyOps.
+#
+# Its filesystem ROOT *is* the contents of the Jellyfin plugin directory. The payload is
+# the published upstream File Transformation release artifact (Release-12.2.0.zip from
+# IAmParadox27/jellyfin-plugin-file-transformation 3.0.2.0: the plugin DLL, deps.json, pdb
+# and logo), unzipped into `plugin/` by docker/build-push.sh, plus docker/meta.json (the
+# upstream zip carries no meta.json; Jellyfin normally writes it from the catalog
+# manifest). Nothing is compiled in this repo.
+#
+# JellyOps mounts this image read-only and, with `injection: imageVolumeCopy`, copies the
+# root into `/config/plugins/File Transformation_<version>/` before Jellyfin starts.
 FROM scratch
+
 COPY plugin/ /
-LABEL io.jellyops.plugin.guid="cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11" \
+
+# Self-description labels (JellyOps spec §5.3). The operator reads identity from the CR's
+# spec.meta; these back the label fallback and document the payload. Keep in sync with
+# docker/meta.json. targetAbi is upstream's own manifest value for this zip (12.2.0.0);
+# framework is the TargetFramework in the zip's deps.json (.NETCoreApp v10.0).
+LABEL io.jellyops.plugin.guid="5e87cc92-571a-4d8d-8d98-d2d4147f9f90" \
       io.jellyops.plugin.name="File Transformation" \
-      io.jellyops.plugin.version="2.5.0.2" \
-      io.jellyops.plugin.targetAbi="12.0.0.0" \
+      io.jellyops.plugin.version="3.0.2.0" \
+      io.jellyops.plugin.targetAbi="12.2.0.0" \
       io.jellyops.plugin.framework="net10.0"

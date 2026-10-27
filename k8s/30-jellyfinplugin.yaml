@@ -1,10 +1,15 @@
-# File Transformation plugin (v12 port), delivered by JellyOps to the home-media instance.
-# Zero-config: no install hooks, no companion workload — it Harmony-patches the server web
-# static-file pipeline at startup so other plugins (e.g. OpenWatchParty) can register
-# index.html transformations. REQUIRES a web-serving (non-split) Jellyfin instance, since it
-# patches the server's own web hosting.
+# File Transformation plugin (upstream IAmParadox27 3.0.2.0, repackaged unmodified), delivered
+# by JellyOps to the home-media instance. Zero-config: no install hooks, no companion workload.
+# 3.x installs an ASP.NET Core IStartupFilter middleware that rewrites responses under /web/,
+# so other plugins (OpenWatchParty, Keycloak SSO, Distributed Transcoding) can register
+# index.html transformations via PluginInterface.RegisterTransformation(JObject).
 #
-# Pin spec.pluginImage.reference to the @sha256 digest printed by docker/build-push.sh.
+# REQUIRES the server process to serve /web itself: on the CrunchyMonkies fork images (which
+# bake --nowebclient) set the Jellyfin CR's spec.web.mode: volume.
+#
+# Pin spec.pluginImage.reference to the @sha256 digest printed by the publish workflow (or
+# docker/build-push.sh). The digest below is the previous 2.5.0.2 port image and MUST be
+# re-pinned before this manifest is applied — meta.version must match the payload's meta.json.
 apiVersion: jellyfin.jellyops.io/v1alpha1
 kind: JellyfinPlugin
 metadata:
@@ -16,11 +21,11 @@ spec:
   jellyfinRef:
     name: jellyfin
   pluginImage:
-    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:e461815bd5e87840a8495f417f1a89218f1ad62bb5d03f5100a6a210ec47ce33
+    reference: ghcr.io/crunchymonkies/jellyops-plugin-file-transformation/plugin@sha256:e461815bd5e87840a8495f417f1a89218f1ad62bb5d03f5100a6a210ec47ce33 # TODO re-pin to the 3.0.2.0 image
     pullPolicy: IfNotPresent
   meta:
-    guid: cf7c3f2a-6e1f-4a2c-9a3d-1e5b0c9d4f11
+    guid: 5e87cc92-571a-4d8d-8d98-d2d4147f9f90 # upstream plugin Id (the DLL's FileTransformationPlugin.Id)
     name: "File Transformation"
-    version: "2.5.0.2"
-    targetAbi: "12.0.0.0"
+    version: "3.0.2.0" # -> on-disk folder "File Transformation_3.0.2.0"
+    targetAbi: "12.2.0.0" # upstream's manifest ABI for Release-12.2.0.zip; loads on 12.3 (<=)
   injection: imageVolumeCopy

@@ -1,15 +1,9 @@
 name: Build & Publish Plugin Image
 
-# Compiles the File Transformation plugin (src/Plugin) against the Jellyfin v12 (.NET 10)
-# assemblies, strips host assemblies (the csproj StripHostAssemblies* targets), and packages
-# the payload into a FROM-scratch image-volume payload pushed to GHCR (provenance disabled so
-# the kubelet mounts it cleanly as an image volume). Mirrors docker/build-push.sh.
-#
-# The plugin compiles against the Jellyfin fork's assemblies, so this workflow checks out
-# CrunchyMonkies/jellyfin as a sibling (dir `jellyfin-src`, matching the csproj's
-# ../../../jellyfin-src relative ProjectReferences) at the tag the deployed server runs.
-# CrunchyMonkies/jellyfin is public, so the default GITHUB_TOKEN can read it; set the optional
-# repo secret JELLYFIN_SRC_TOKEN (PAT with contents:read) only if that repo is made private.
+# Repackages upstream File Transformation's published release artifact
+# (IAmParadox27/jellyfin-plugin-file-transformation, Release-<jellyfin>.zip) plus docker/meta.json
+# into a FROM-scratch image-volume payload and pushes it to GHCR (provenance disabled so the
+# kubelet mounts it cleanly as an image volume). Nothing is compiled. Mirrors docker/build-push.sh.
 
 on:
   push:
@@ -17,10 +11,18 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      jellyfin_src_ref:
-        description: "CrunchyMonkies/jellyfin ref (branch/tag) to build against"
+      ft_tag:
+        description: "Upstream File Transformation release tag to package"
         required: true
-        default: "v12.0.0-rc3-jc-0.2.1"
+        default: "3.0.2.0"
+      ft_asset:
+        description: "Release asset (zip) to package"
+        required: true
+        default: "Release-12.2.0.zip"
+      ft_sha256:
+        description: "Expected SHA-256 of the asset (must match the pinned default unless changed together)"
+        required: true
+        default: "b267dc0e09154f242ef9d3201a6ed4fd1dc9594da42ff133400b0ed4ca10b859"
 
 permissions:
   contents: read
@@ -28,46 +30,32 @@ permissions:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}/plugin
-  JELLYFIN_SRC_REPO: CrunchyMonkies/jellyfin
-  # Build against the exact tag the deployed server image was built from, so the plugin's
-  # compiled ABI matches the running host.
-  JELLYFIN_SRC_REF: ${{ github.event.inputs.jellyfin_src_ref || 'v12.0.0-rc3-jc-0.2.1' }}
+  FT_REPO: IAmParadox27/jellyfin-plugin-file-transformation
+  FT_TAG: ${{ github.event.inputs.ft_tag || '3.0.2.0' }}
+  FT_ASSET: ${{ github.event.inputs.ft_asset || 'Release-12.2.0.zip' }}
+  FT_SHA256: ${{ github.event.inputs.ft_sha256 || 'b267dc0e09154f242ef9d3201a6ed4fd1dc9594da42ff133400b0ed4ca10b859' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout plugin repo
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: plugin-repo
 
-      - name: Checkout jellyfin-src (sibling)
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.JELLYFIN_SRC_REPO }}
-          ref: ${{ env.JELLYFIN_SRC_REF }}
-          token: ${{ secrets.JELLYFIN_SRC_TOKEN || secrets.GITHUB_TOKEN }}
-          path: jellyfin-src
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Publish plugin payload
-        working-directory: plugin-repo
+      - name: Download & verify upstream release payload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet publish src/Plugin/Jellyfin.Plugin.FileTransformation.csproj -c Release -o publish -v minimal
+          gh release download "${FT_TAG}" --repo "${FT_REPO}" --pattern "${FT_ASSET}" --dir . --clobber
+          echo "${FT_SHA256}  ${FT_ASSET}" | sha256sum -c -
           mkdir -p plugin
-          cp publish/*.dll plugin/
-          cp publish/meta.json plugin/meta.json
-          # Fail if host assemblies leaked (they must resolve from the host ALC). 0Harmony is
-          # embedded in the plugin DLL, not shipped loose, so it is not expected here.
+          unzip -o -q "${FT_ASSET}" -d plugin
+          cp docker/meta.json plugin/meta.json
+          test -f plugin/Jellyfin.Plugin.FileTransformation.dll
           leaked="$(find plugin -maxdepth 1 -type f \( -name 'Emby.*' -o -name 'MediaBrowser.*' \
             -o \( -name 'Jellyfin.*' -a ! -name 'Jellyfin.Plugin.FileTransformation*' \) \))"
           if [ -n "$leaked" ]; then
-            echo "forbidden assemblies leaked into payload:" >&2; echo "$leaked" >&2; exit 1
+            echo "forbidden assemblies in payload:" >&2; echo "$leaked" >&2; exit 1
           fi
           echo "Payload:"; ls -1 plugin
 
@@ -85,14 +73,15 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=ref,event=tag
+            type=raw,value=${{ env.FT_TAG }}
             type=raw,value=latest
 
       - name: Build & push (provenance disabled)
         id: build
         uses: docker/build-push-action@v6
         with:
-          context: plugin-repo
-          file: plugin-repo/docker/Dockerfile.plugin
+          context: .
+          file: docker/Dockerfile.plugin
           push: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
@@ -103,7 +92,7 @@ jobs:
           {
             echo "### File Transformation plugin image published"
             echo ""
-            echo "- Built against: \`${JELLYFIN_SRC_REPO}\` @ \`${JELLYFIN_SRC_REF}\`"
+            echo "- Payload: \`${FT_REPO}\` @ \`${FT_TAG}\` / \`${FT_ASSET}\` (sha256 \`${FT_SHA256}\`)"
             echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
             echo ""
             echo "Pin in \`k8s/30-jellyfinplugin.yaml\` (spec.pluginImage.reference):"

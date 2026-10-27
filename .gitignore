@@ -1,0 +1,10 @@
+# oh-my-claudecode tooling state (session-scoped; not project content)
+.omc/
+
+# Plugin payload assembled at build time (downloaded release zip + meta.json)
+/plugin/
+*.zip
+
+# .NET build output (nothing is compiled here any more; guard against strays)
+bin/
+obj/
